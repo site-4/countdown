@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown 2026 - Ultra Edition</title>
+    <!-- Diverse Font Library -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Special+Elite&family=Pacifico&family=Bungee+Shade&family=UnifrakturMaguntia&family=Press+Start+2P&family=Permanent+Marker&family=Monoton&family=Righteous&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --transition-speed: 1.5s;
+            --m-ratio-x: 0; --m-ratio-y: 0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            height: 100vh; background-color: #000;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; font-family: sans-serif; perspective: 1000px;
+        }
+
+        /* --- THE DUAL-LAYER BUFFER SYSTEM --- */
+        .bg-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            transition: opacity var(--transition-speed) ease-in-out;
+            z-index: -2; opacity: 0;
+        }
+        .bg-active { opacity: 1; z-index: -1; }
+
+        /* Custom Star Canvas (Designed by me) */
+        #star-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -3; display: none; pointer-events: none;
+        }
+
+        body::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2); z-index: 1; pointer-events: none;
+        }
+
+        #countdown-container {
+            text-align: center; padding: 60px; border-radius: 40px;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.1s ease-out;
+            position: relative; z-index: 10;
+        }
+
+        .timer-display {
+            font-size: 6rem; display: flex; gap: 20px; font-weight: bold;
+            text-align: center; pointer-events: none;
+        }
+
+        .unit-box { display: flex; flex-direction: column; align-items: center; }
+        .label { font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; }
+
+        /* --- THEME STYLING --- */
+        .theme-space { color: #fff; font-family: 'Orbitron'; }
+        .theme-space #star-canvas { display: block; }
+        .theme-space #countdown-container { text-shadow: 0 0 25px #00d4ff; animation: zeroGravity 10s infinite; }
+
+        .theme-1 { color: #f5f5dc; font-family: 'Special Elite'; }
+        .theme-1 #countdown-container { background: rgba(0,0,0,0.6); border: 2px solid #f5f5dc; transform: rotateY(calc(var(--m-ratio-x) * 15deg)) rotateX(calc(var(--m-ratio-y) * -15deg)); }
+
+        .theme-2 { color: #d81b60; font-family: 'Pacifico'; }
+        .theme-2 #countdown-container { text-shadow: 2px 2px #fff; transform: scale(calc(1 + (Math.abs(var(--m-ratio-x)) * 0.05))); }
+
+        .theme-3 { color: #ccff00; font-family: 'Bungee Shade'; }
+        .theme-3 #countdown-container { animation: jelloWobble 2s infinite; transform: skew(calc(var(--m-ratio-x) * 15deg)); border-radius: 40% 60%; background: rgba(0, 255, 0, 0.1); }
+
+        .theme-4 { color: #f0f; font-family: 'Orbitron'; }
+        .theme-4 #countdown-container { text-shadow: 3px 3px 0px #0ff; border: 4px double #f0f; }
+
+        .theme-5 { color: #e0f2f1; font-family: 'Righteous'; }
+        .theme-5 #countdown-container { background: rgba(0, 77, 64, 0.4); border: 1px solid #4db6ac; }
+
+        .theme-6 { color: #39ff14; font-family: 'Press Start 2P'; }
+        .theme-6 .timer-display { font-size: 3rem; }
+
+        .theme-8 { color: #fff; font-family: 'Permanent Marker'; }
+        .theme-8 #countdown-container { transform: rotate(calc(var(--m-ratio-x) * 8deg)); background: rgba(0,0,0,0.4); }
+
+        .theme-9 { color: #d4af37; font-family: 'Monoton'; }
+        .theme-9 #countdown-container { border: 2px solid #d4af37; background: #000; letter-spacing: 5px; }
+
+        .theme-10 { color: #7fdbff; font-family: 'Righteous'; }
+        .theme-10 #countdown-container { filter: blur(calc(Math.abs(var(--m-ratio-x)) * 2px)); text-shadow: 0 0 10px #7fdbff; }
+
+        .theme-11 { color: #000; font-family: 'Bungee Shade'; }
+        .theme-11 #countdown-container { border: 8px solid #000; background: #fff; transform: skew(-10deg); box-shadow: 15px 15px 0px #f44336; }
+
+        .theme-13 { color: #ffeb3b; font-family: 'Permanent Marker'; }
+        .theme-13 #countdown-container { background: rgba(0,0,0,0.5); transform: rotate(calc(var(--m-ratio-x) * 5deg)); border-radius: 50px; }
+
+        .theme-14 { color: #ff4500; font-family: 'Orbitron'; }
+        .theme-14 #countdown-container { text-shadow: 0 0 15px #f00; box-shadow: inset 0 0 40px #f00; background: rgba(0,0,0,0.6); }
+
+        .theme-15 { color: #f5f5f5; font-family: 'Special Elite'; }
+        .theme-15 #countdown-container { border-radius: 50%; border: 15px solid #111; transform: rotate(calc(var(--m-ratio-x) * 360deg)); transition: transform 2.5s ease-out; background: rgba(0,0,0,0.85); }
+
+        .theme-16 { color: #fff; font-family: 'Pacifico'; }
+        .theme-16 #countdown-container { text-shadow: 2px 2px #ff4081; }
+
+        .theme-17 { color: #39ff14; font-family: 'Orbitron'; }
+        .theme-17 #countdown-container { border: 2px solid #39ff14; box-shadow: 0 0 20px #39ff14; background: rgba(0,0,0,0.9); }
+
+        @keyframes zeroGravity { 0%, 100% { transform: translate(0,0); } 33% { transform: translate(20px, -25px); } 66% { transform: translate(-10px, 10px); } }
+        @keyframes jelloWobble { 0%, 100% { transform: scale(1,1); } 30% { transform: scale(1.2, 0.8); } }
+
+        @media (max-width: 768px) { .timer-display { font-size: 3rem; } }
+    </style>
+</head>
+<body class="theme-17">
+
+    <div id="bg-1" class="bg-layer bg-active"></div>
+    <div id="bg-2" class="bg-layer"></div>
+    <canvas id="star-canvas"></canvas>
+
+    <div id="countdown-container">
+        <div class="timer-display">
+            <div class="unit-box"><span id="days">00</span><div class="label">Days</div></div>
+            <span>:</span>
+            <div class="unit-box"><span id="hours">00</span><div class="label">Hours</div></div>
+            <span>:</span>
+            <div class="unit-box"><span id="minutes">00</span><div class="label">Minutes</div></div>
+            <span>:</span>
+            <div class="unit-box"><span id="seconds">00</span><div class="label">Seconds</div></div>
+        </div>
+    </div>
+
+    <script>
+        const targetDate = new Date('January 24, 2026 11:32:00').getTime();
+        const root = document.documentElement;
+        let manualIdx = -1;
+        let currentImgUrl = "";
+
+        const themeMap = {
+            1: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=1920', // Library
+            2: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1920', // Sunset
+            3: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?q=80&w=1920', // Jello
+            4: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=1920', // Cyberpunk
+            5: 'https://images.unsplash.com/photo-1531366930003-8a50ed816f0d?q=80&w=1920', // Aurora (Replaced Clown)
+            6: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1920', // Retro
+            8: 'https://images.unsplash.com/photo-1525909002-1b05e0c869d8?q=80&w=1920', // Graffiti
+            10: 'https://images.unsplash.com/photo-1551244072-5d12893278ab?q=80&w=1920', // Deep Sea
+            11: 'https://images.unsplash.com/photo-1588497859490-85d1c17db96d?q=80&w=1920', // Comic
+            13: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=1920', // Jungle
+            14: 'https://images.unsplash.com/photo-1621415170390-192667362f6b?q=80&w=1920', // Lava
+            15: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?q=80&w=1920', // Record
+            16: 'https://images.unsplash.com/photo-1533910534207-90f2d02ad0db?q=80&w=1920', // Neon Candy
+            17: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=1920'  // Neon HK
+        };
+
+        // --- BACKGROUND HANDLER (THE BUFFER SYSTEM) ---
+        function setBackground(url) {
+            if (url === currentImgUrl) return;
+            currentImgUrl = url;
+
+            const bg1 = document.getElementById('bg-1');
+            const bg2 = document.getElementById('bg-2');
+            const active = bg1.classList.contains('bg-active') ? bg1 : bg2;
+            const hidden = active === bg1 ? bg2 : bg1;
+
+            if (!url) { // Fade out for custom Star theme
+                active.style.opacity = 0; active.classList.remove('bg-active');
+                return;
+            }
+
+            const loader = new Image();
+            loader.src = url;
+            loader.onload = () => {
+                hidden.style.backgroundImage = `url(${url})`;
+                hidden.classList.add('bg-active');
+                active.classList.remove('bg-active');
+            };
+        }
+
+        // --- STARFIELD CANVAS (DESIGNED BY ME) ---
+        const canvas = document.getElementById('star-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        function resize() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            stars = []; for(let i=0; i<350; i++) stars.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, z:Math.random()*canvas.width, o:Math.random()});
+        }
+        function draw() {
+            const mx = parseFloat(root.style.getPropertyValue('--m-ratio-x')) || 0;
+            const my = parseFloat(root.style.getPropertyValue('--m-ratio-y')) || 0;
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            // Nebula Core
+            const grad = ctx.createRadialGradient(canvas.width/2+(mx*100), canvas.height/2+(my*100), 0, canvas.width/2, canvas.height/2, canvas.width);
+            grad.addColorStop(0, '#0a0020'); grad.addColorStop(1, '#000'); ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+            // Stars
+            ctx.fillStyle = '#fff';
+            for(let s of stars) {
+                s.z -= (2 + Math.abs(mx)*10); if(s.z <= 0) s.z = canvas.width;
+                const sx = (s.x-canvas.width/2)*(canvas.width/s.z)+canvas.width/2+(mx*50);
+                const sy = (s.y-canvas.height/2)*(canvas.width/s.z)+canvas.height/2+(my*50);
+                ctx.globalAlpha = s.o; ctx.beginPath(); ctx.arc(sx,sy,(1-s.z/canvas.width)*3,0,Math.PI*2); ctx.fill();
+            }
+            requestAnimationFrame(draw);
+        }
+        window.addEventListener('resize', resize); resize(); draw();
+
+        // --- CORE TICK LOGIC ---
+        window.addEventListener('mousemove', (e) => {
+            root.style.setProperty('--m-ratio-x', (e.clientX/window.innerWidth)*2-1);
+            root.style.setProperty('--m-ratio-y', (e.clientY/window.innerHeight)*2-1);
+        });
+
+        function tick() {
+            const diff = targetDate - new Date().getTime();
+            const d = Math.max(0, Math.floor(diff/86400000));
+            document.getElementById('days').innerText = String(d).padStart(2,'0');
+            document.getElementById('hours').innerText = String(Math.max(0,Math.floor((diff % 86400000)/3600000))).padStart(2,'0');
+            document.getElementById('minutes').innerText = String(Math.max(0,Math.floor((diff % 3600000)/60000))).padStart(2,'0');
+            document.getElementById('seconds').innerText = String(Math.max(0,Math.floor((diff % 60000)/1000))).padStart(2,'0');
+
+            let idx = (manualIdx !== -1) ? manualIdx : d;
+            idx = Math.max(0, Math.min(17, idx));
+            
+            const isSpace = [0, 7, 12].includes(idx);
+            document.body.className = isSpace ? 'theme-space' : `theme-${idx}`;
+            setBackground(themeMap[idx] || null);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '2') {
+                manualIdx = (manualIdx === -1) ? 17 : (manualIdx <= 0 ? 17 : manualIdx - 1);
+                tick();
+            }
+        });
+
+        setInterval(tick, 1000); tick();
+        // Aggressive pre-preload
+        Object.values(themeMap).forEach(url => { const i = new Image(); i.src = url; });
+    </script>
+</body>
+</html>
