@@ -38,7 +38,7 @@
             color: white; border-radius: 10px; margin-bottom: 15px; outline: none;
             font-size: 1rem; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
         }
-        input:focus { background: rgba(255,255,255,0.2); }
+        input:focus { background: rgba(255,255,255,0.2); border-color: var(--theme-color); }
         
         button {
             width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
@@ -100,9 +100,14 @@
         async function checkAndSend() {
             const el = document.getElementById('user-guess');
             const fb = document.getElementById('feedback');
-            const val = el.value.toLowerCase();
+            const rawGuess = el.value.trim();
+            const val = rawGuess.toLowerCase();
             
-            if(!val) return;
+            if(!val) {
+                fb.innerText = "Please enter something!";
+                fb.style.color = "#fff";
+                return;
+            }
             
             const words = ["date", "library", "trip"];
             const isCorrect = words.some(w => val.includes(w));
@@ -112,16 +117,21 @@
             
             if(isCorrect) triggerConfetti();
 
-            // Background transmission (Silent - No text changes to button)
+            // Background transmission
             try {
                 fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', // Essential for Google Apps Script redirects
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ guess: el.value, isCorrect: isCorrect })
+                    body: JSON.stringify({ guess: rawGuess, isCorrect: isCorrect })
                 });
-            } catch (err) { /* Silent fail */ }
+                
+                // Clear input after a correct hit
+                if(isCorrect) setTimeout(() => { el.value = ""; }, 3000);
+            } catch (err) { console.error("Script communication error", err); }
         }
+
+        // --- ALL CANVAS ENGINE CODE PRESERVED AS IS ---
 
         function triggerConfetti() {
             for(let i=0; i<40; i++) {
@@ -133,7 +143,6 @@
             }
         }
 
-        // DESIGN ENGINES
         class Part {
             constructor() { this.init(); }
             init() {
