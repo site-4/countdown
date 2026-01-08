@@ -16,51 +16,37 @@
             text-align: center; padding: 40px; pointer-events: none; position: relative; z-index: 10;
             transform: rotateY(calc(var(--m-x) * 12deg)) rotateX(calc(var(--m-y) * -12deg));
             transition: transform 0.1s ease-out;
+            display: flex; flex-direction: column; align-items: center;
         }
 
         .timer-display { font-size: 6rem; display: flex; gap: 20px; font-weight: bold; color: var(--theme-color); }
         .unit-box { display: flex; flex-direction: column; align-items: center; }
         .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; opacity: 0.7; }
 
-        /* GUESSING ENGINE UI */
-        #guess-container {
-            position: relative; z-index: 20; width: 380px; padding: 25px;
-            background: rgba(0,0,0,0.3); backdrop-filter: blur(15px);
-            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            margin-top: 40px; text-align: center; color: white;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .subtitle {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            color: var(--theme-color);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.9;
+            transition: all 0.5s ease;
         }
-        
-        #guess-container p { margin-bottom: 15px; letter-spacing: 1px; font-size: 0.9rem; }
-        
-        input {
-            width: 100%; padding: 14px; border: none; background: rgba(255,255,255,0.1);
-            color: white; border-radius: 10px; margin-bottom: 15px; outline: none;
-            font-size: 1rem; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
-        }
-        input:focus { background: rgba(255,255,255,0.2); border-color: var(--theme-color); }
-        
-        button {
-            width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
-            background: var(--theme-color, #fff); color: #000; font-weight: 900;
-            text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
-        }
-        button:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        button:active { transform: scale(0.98); }
-
-        #feedback { margin-top: 15px; font-weight: bold; height: 1.2rem; font-size: 0.9rem; letter-spacing: 1px; }
 
         /* Font Mappings */
-        .f-0, .f-4, .f-7, .f-11, .f-12, .f-14, .f-17 { font-family: 'Orbitron'; }
+        .f-0, .f-4, .f-7, .f-11, .f-12, .f-14, .f-16, .f-17 { font-family: 'Orbitron'; }
         .f-1, .f-15 { font-family: 'Special Elite'; }
-        .f-2, .f-16 { font-family: 'Pacifico'; }
+        .f-2 { font-family: 'Pacifico'; }
         .f-3 { font-family: 'Bungee Shade'; }
         .f-5, .f-10 { font-family: 'Righteous'; }
         .f-6 { font-family: 'Press Start 2P'; }
         .f-8, .f-13 { font-family: 'Permanent Marker'; }
         .f-9 { font-family: 'Monoton'; }
 
-        @media (max-width: 768px) { .timer-display { font-size: 2.5rem; gap: 10px; } #guess-container { width: 90%; } }
+        @media (max-width: 768px) { 
+            .timer-display { font-size: 2.5rem; gap: 10px; } 
+            .subtitle { font-size: 0.8rem; letter-spacing: 1px; }
+        }
     </style>
 </head>
 <body>
@@ -76,72 +62,17 @@
             <span>:</span>
             <div class="unit-box"><span id="seconds">00</span><div class="label">Sec</div></div>
         </div>
-    </div>
-
-    <!-- Interactive Guess Input -->
-    <div id="guess-container">
-        <p>GUESS WHAT HAPPENS AT THE END?</p>
-        <input type="text" id="user-guess" placeholder="Type your guess here...">
-        <button id="submit-btn" onclick="checkAndSend()">Submit Prediction</button>
-        <div id="feedback"></div>
+        <div class="subtitle" id="subtitle-box">Something unforgettable unlocks at zero</div>
     </div>
 
     <script>
         const targetDate = new Date('January 24, 2026 11:32:00').getTime();
-        const GAS_URL = "https://script.google.com/a/macros/pothisd.us/s/AKfycbyfLXUBgilWFBjrRf9ppBi7bJ_5xMs7RTCbAj_fUKyMLI80piKOUAuDhngUHPn5FGbuXw/exec"; 
         const root = document.documentElement;
         const canvas = document.getElementById('bg-canvas');
         const ctx = canvas.getContext('2d');
         
         let particles = [], manualIdx = -1, currentTheme = -1;
         let mouse = { x: 0, y: 0, rx: 0, ry: 0, down: false };
-
-        // REFINED GUESSING LOGIC
-        async function checkAndSend() {
-            const el = document.getElementById('user-guess');
-            const fb = document.getElementById('feedback');
-            const rawGuess = el.value.trim();
-            const val = rawGuess.toLowerCase();
-            
-            if(!val) {
-                fb.innerText = "Please enter something!";
-                fb.style.color = "#fff";
-                return;
-            }
-            
-            const words = ["date", "library", "trip"];
-            const isCorrect = words.some(w => val.includes(w));
-            
-            fb.style.color = isCorrect ? "#00ffcc" : "#ff4466";
-            fb.innerText = isCorrect ? "You guessed it! I hope you are interested..." : "Try again...";
-            
-            if(isCorrect) triggerConfetti();
-
-            // Background transmission
-            try {
-                fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Essential for Google Apps Script redirects
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ guess: rawGuess, isCorrect: isCorrect })
-                });
-                
-                // Clear input after a correct hit
-                if(isCorrect) setTimeout(() => { el.value = ""; }, 3000);
-            } catch (err) { console.error("Script communication error", err); }
-        }
-
-        // --- ALL CANVAS ENGINE CODE PRESERVED AS IS ---
-
-        function triggerConfetti() {
-            for(let i=0; i<40; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width, y: canvas.height + 10,
-                    vx: (Math.random()-0.5)*12, vy: -Math.random()*18,
-                    s: Math.random()*6+3, c: `hsl(${Math.random()*360}, 80%, 60%)`, type: 'confetti'
-                });
-            }
-        }
 
         class Part {
             constructor() { this.init(); }
@@ -156,7 +87,7 @@
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             particles = []; 
             let count = (currentTheme === 12 || currentTheme === 11) ? 100 : 150;
-            if([0,7,5].includes(currentTheme)) count = 350;
+            if([0,7,5,16].includes(currentTheme)) count = 350;
             for(let i=0; i<count; i++) particles.push(new Part());
         }
 
@@ -166,32 +97,27 @@
             const time = Date.now() * 0.001;
 
             switch(currentTheme) {
-                case 17: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += Math.cos(p.y/100 + time) * 2; p.y += p.vy; if(p.y > canvas.height) p.y=0; ctx.fillStyle='#39ff14'; ctx.fillRect(p.x, p.y, 2, 10); }); break;
-                case 16: ctx.fillStyle = '#fce4ec'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += p.vx; p.y += p.vy; if(p.x<0||p.x>canvas.width) p.vx*=-1; ctx.fillStyle='#f0629244'; ctx.beginPath(); ctx.arc(p.x,p.y,p.s*20,0,7); ctx.fill(); }); break;
+                case 17: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += Math.cos(p.y/100 + time) * 2; p.y += p.vy; if(p.y > canvas.height) p.y=0; ctx.fillStyle='#39ff14'; ctx.fillRect(p.x, p.y, 2, 10); }); break;              
                 case 15: ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height); for(let i=0; i<20; i++) { ctx.strokeStyle = '#333'; ctx.beginPath(); ctx.arc(canvas.width/2+mouse.rx*0.1, canvas.height/2+mouse.ry*0.1, i*40 + (mouse.down?10:0), 0, 7); ctx.stroke(); } break;
                 case 14: ctx.fillStyle = '#210101'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y -= p.s*b; if(p.y<0) {p.y=canvas.height; p.x=Math.random()*canvas.width;} ctx.fillStyle=`hsl(${p.s*10}, 100%, 50%)`; ctx.fillRect(p.x, p.y, p.s, p.s); }); break;
                 case 13: ctx.fillStyle = '#041a04'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += Math.sin(time + p.s); p.y -= 0.5; if(p.y<0) p.y=canvas.height; ctx.fillStyle='#4caf50aa'; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+10,p.y+20); ctx.lineTo(p.x-10,p.y+20); ctx.fill(); }); break;
-                case 12: ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle = '#0F0'; ctx.font = "20px monospace"; particles.forEach(p => { ctx.fillText(String.fromCharCode(0x30A0 + Math.random()*96), p.x, p.y); p.y += 20*b; if(p.y > canvas.height) p.y=0; }); break;
+                case 1: ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle = '#0F0'; ctx.font = "20px monospace"; particles.forEach(p => { ctx.fillText(String.fromCharCode(0x30A0 + Math.random()*96), p.x, p.y); p.y += 20*b; if(p.y > canvas.height) p.y=0; }); break;
                 case 11: ctx.fillStyle = '#020508'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += p.vx; p.y += p.vy; if(p.x < 0 || p.x > canvas.width) p.vx *= -1; if(p.y < 0 || p.y > canvas.height) p.vy *= -1; let d = Math.hypot(mouse.rx - p.x, mouse.ry - p.y); if(d < 250) { ctx.strokeStyle = `rgba(0, 255, 255, ${1 - d/250})`; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.rx, mouse.ry); ctx.stroke(); } ctx.fillStyle = '#0ff'; ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 7); ctx.fill(); }); break;
                 case 10: ctx.fillStyle = '#001d3d'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y -= p.s; if(p.y<0) p.y=canvas.height; ctx.strokeStyle='#0ff5'; ctx.beginPath(); ctx.arc(p.x+Math.sin(time+p.s)*20, p.y, p.s*5, 0, 7); ctx.stroke(); }); break;
                 case 9: ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = '#d4af37'; for(let i=0; i<10; i++) { ctx.strokeRect(canvas.width/2 - i*50 + mouse.rx*0.05, canvas.height/2 - i*30, i*100, i*60); } break;
                 case 8: if(mouse.down) { ctx.fillStyle=`hsl(${time*100}, 100%, 50%)`; ctx.beginPath(); ctx.arc(mouse.rx, mouse.ry, 20, 0, 7); ctx.fill(); } break;
-                case 7: 
-                case 0: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.z -= (currentTheme===0 ? 1 : 15)*b; if(p.z<=0) p.z=canvas.width; let sx = (p.x-canvas.width/2)*(canvas.width/p.z)+canvas.width/2 + mouse.x*50; let sy = (p.y-canvas.height/2)*(canvas.width/p.z)+canvas.height/2 + mouse.y*50; ctx.fillStyle=`rgba(255,255,255,${1-p.z/canvas.width})`; ctx.beginPath(); ctx.arc(sx,sy,(1-p.z/canvas.width)*(currentTheme===0?10:3),0,7); ctx.fill(); }); break;
                 case 6: let id = ctx.createImageData(100,100); for(let i=0; i<id.data.length; i+=4) { id.data[i]=id.data[i+1]=id.data[i+2]=Math.random()*255; id.data[i+3]=100; } ctx.putImageData(id, mouse.rx%100, mouse.ry%100); break;
                 case 5: ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.filter='blur(40px)'; for(let i=0; i<5; i++) { ctx.fillStyle=['#0f9','#0ff','#00f'][i%3]; ctx.beginPath(); ctx.ellipse(canvas.width/2, canvas.height/2 + Math.sin(time+i)*100, canvas.width, 100, Math.sin(time/2), 0, 7); ctx.fill(); } ctx.filter='none'; break;
                 case 4: ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height); if(Math.random()>0.9) { ctx.fillStyle='#f0f2'; ctx.fillRect(Math.random()*canvas.width, 0, 50, canvas.height); } ctx.fillStyle='#0ff'; ctx.fillRect(mouse.rx-25, mouse.ry-25, 50, 50); break;
                 case 3: ctx.fillStyle='#2e7d32'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.x += p.vx; p.y += p.vy; if(p.x<0||p.x>canvas.width) p.vx*=-1; let d = Math.hypot(mouse.rx-p.x, mouse.ry-p.y); ctx.fillStyle=`rgba(204,255,0,${Math.max(0, 1-d/300)})`; ctx.beginPath(); ctx.arc(p.x,p.y,40,0,7); ctx.fill(); }); break;
                 case 2: ctx.fillStyle='#ff80ab'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y -= p.s*b; if(p.y<0) p.y=canvas.height; ctx.fillStyle='#fff8'; ctx.font="30px serif"; ctx.fillText("♥", p.x, p.y); }); break;
-                case 1: ctx.fillStyle='#3e2723'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y += p.s; p.x += Math.sin(p.y/20); if(p.y>canvas.height) p.y=0; ctx.fillStyle='#f5f5dc22'; ctx.fillRect(p.x,p.y,40,50); }); break;
-            }
+                case 12: ctx.fillStyle='#3e2723'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y += p.s; p.x += Math.sin(p.y/20); if(p.y>canvas.height) p.y=0; ctx.fillStyle='#f5f5dc22'; ctx.fillRect(p.x,p.y,40,50); }); break;
 
-            particles.forEach((p, i) => {
-                if(p.type === 'confetti') {
-                    p.y += p.vy; p.x += p.vx; p.vy += 0.3; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s);
-                    if(p.y > canvas.height) particles.splice(i, 1);
-                }
-            });
+                // FALLBACK THEME (Replacing Pink Bubbly Case 16 with Starfield)
+                case 16:
+                case 7: 
+                case 0: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.z -= (currentTheme===0 ? 1 : 15)*b; if(p.z<=0) p.z=canvas.width; let sx = (p.x-canvas.width/2)*(canvas.width/p.z)+canvas.width/2 + mouse.x*50; let sy = (p.y-canvas.height/2)*(canvas.width/p.z)+canvas.height/2 + mouse.y*50; ctx.fillStyle=`rgba(255,255,255,${1-p.z/canvas.width})`; ctx.beginPath(); ctx.arc(sx,sy,(1-p.z/canvas.width)*(currentTheme===0?10:3),0,7); ctx.fill(); }); break;
+            }
 
             requestAnimationFrame(draw);
         }
@@ -210,12 +136,13 @@
             document.getElementById('hours').innerText = String(Math.max(0,Math.floor((diff%86400000)/3600000))).padStart(2,'0');
             document.getElementById('minutes').innerText = String(Math.max(0,Math.floor((diff%3600000)/60000))).padStart(2,'0');
             document.getElementById('seconds').innerText = String(Math.max(0,Math.floor((diff%60000)/1000))).padStart(2,'0');
+            
             let idx = manualIdx!==-1?manualIdx:d; idx=Math.max(0,Math.min(17,idx));
             if(currentTheme!==idx){ 
                 currentTheme=idx; setup(); 
                 document.getElementById('display-font-box').className = `timer-display f-${idx}`;
-                document.getElementById('guess-container').style.fontFamily = document.getElementById('display-font-box').style.fontFamily;
-                root.style.setProperty('--theme-color', [9,11,12,17].includes(idx)?'#fff':(idx===6?'#39ff14':'#fff'));
+                document.getElementById('subtitle-box').className = `subtitle f-${idx}`;
+                root.style.setProperty('--theme-color', [9,11,12,17,0,7,16].includes(idx)?'#fff':(idx===6?'#39ff14':'#fff'));
             }
         }
         
