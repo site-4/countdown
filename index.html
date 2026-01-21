@@ -6,6 +6,10 @@
     <title>Countdown</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Special+Elite&family=Pacifico&family=Bungee+Shade&family=Press+Start+2P&family=Permanent+Marker&family=Monoton&family=Righteous&display=swap" rel="stylesheet">
+    
+    <!-- Supabase Integration Required for Data Storage -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         :root { --m-x: 0; --m-y: 0; --theme-color: #fff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,6 +37,31 @@
             transition: all 0.5s ease;
         }
 
+        /* Interactive Question Layer Styles */
+        #unlock-sequence {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 600px; z-index: 100; display: none; text-align: center;
+            color: white; font-family: 'Orbitron', sans-serif; background: rgba(0,0,0,0.8);
+            padding: 40px; border: 2px solid var(--theme-color); border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .question-text { font-size: 1.5rem; margin-bottom: 30px; line-height: 1.4; color: var(--theme-color); }
+        
+        .btn-group { display: flex; gap: 20px; justify-content: center; }
+        .action-btn { 
+            padding: 15px 30px; border-radius: 10px; border: 2px solid var(--theme-color);
+            background: transparent; color: white; cursor: pointer; text-transform: uppercase;
+            font-family: 'Righteous', cursive; transition: all 0.3s;
+        }
+        .action-btn:hover { background: var(--theme-color); color: black; box-shadow: 0 0 20px var(--theme-color); }
+
+        #response-input {
+            width: 100%; padding: 15px; border-radius: 10px; border: 1px solid white;
+            background: rgba(255,255,255,0.1); color: white; font-family: inherit;
+            margin-top: 20px; resize: none;
+        }
+
         /* Font Mappings */
         .f-0, .f-4, .f-7, .f-11, .f-12, .f-14, .f-16, .f-17 { font-family: 'Orbitron'; }
         .f-1, .f-15 { font-family: 'Special Elite'; }
@@ -46,12 +75,14 @@
         @media (max-width: 768px) { 
             .timer-display { font-size: 2.5rem; gap: 10px; } 
             .subtitle { font-size: 0.8rem; letter-spacing: 1px; }
+            .question-text { font-size: 1.1rem; }
         }
     </style>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
 
+    <!-- Master UI for Countdown -->
     <div id="countdown-container">
         <div class="timer-display" id="display-font-box">
             <div class="unit-box"><span id="days">00</span><div class="label">Days</div></div>
@@ -65,7 +96,53 @@
         <div class="subtitle" id="subtitle-box">Something unforgettable unlocks at zero</div>
     </div>
 
+    <!-- Interactive Terminal After Zero -->
+    <div id="unlock-sequence">
+        <div id="step-1">
+            <div class="question-text">Do you want to receive it in person, or right now?</div>
+            <div class="btn-group">
+                <button class="action-btn" onclick="handleChoice('in_person')">In Person</button>
+                <button class="action-btn" onclick="handleChoice('right_now')">Right Now</button>
+            </div>
+        </div>
+
+        <div id="step-sure" style="display: none;">
+            <div class="question-text">Are you sure?</div>
+            <div class="btn-group">
+                <button class="action-btn" onclick="handleConfirm(true)">Yes</button>
+                <button class="action-btn" onclick="handleConfirm(false)">No</button>
+            </div>
+        </div>
+
+        <div id="step-final" style="display: none;">
+            <div class="question-text" id="final-proposal-text">
+                If you are not doing anything this Saturday, I would like to go to the library with you to just do something together outside of school for the first time. 
+                You can call it what you want: A date, a friend meeting, a study session, a hangout, or an adventure! But whatever you call it, I think it will be really fun! 
+                <br><br>Do you want to go with me?
+            </div>
+            <textarea id="response-input" rows="3" placeholder="Type your answer here..."></textarea>
+            <button class="action-btn" style="margin-top: 20px; width: 100%;" onclick="submitToSupabase()">Send Answer</button>
+        </div>
+
+        <div id="step-person-msg" style="display: none;">
+            <div class="question-text">Okay! GO ask Derrick about it!</div>
+            <button class="action-btn" onclick="location.reload()">Back</button>
+        </div>
+
+        <div id="step-completed" style="display: none;">
+            <div class="question-text">Your response was sent!</div>
+        </div>
+    </div>
+
     <script>
+        /**
+         * SUPABASE CONFIGURATION
+         * Replace the credentials below with your own project info
+         */
+        const SB_URL = 'https://yuymttkhmphzfesfsgna.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1eW10dGtobXBoemZlc2ZzZ25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3Nzg2MzcsImV4cCI6MjA4NDM1NDYzN30.zwvcoB9-t-UbNgmWkWQsgEc9gDbnnG4Kgi7tmK5HX60';
+        const sb = supabase.createClient(SB_URL, SB_KEY);
+
         const targetDate = new Date('January 21, 2026 11:32:00').getTime();
         const root = document.documentElement;
         const canvas = document.getElementById('bg-canvas');
@@ -73,6 +150,7 @@
         
         let particles = [], manualIdx = -1, currentTheme = -1;
         let mouse = { x: 0, y: 0, rx: 0, ry: 0, down: false };
+        let isComplete = false;
 
         class Part {
             constructor() { this.init(); }
@@ -116,7 +194,7 @@
                 // FALLBACK THEME (Replacing Pink Bubbly Case 16 with Starfield)
                 case 16:
                 case 7: 
-                case 0: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.z -= (currentTheme===0 ? 1 : 15)*b; if(p.z<=0) p.z=canvas.width; let sx = (p.x-canvas.width/2)*(canvas.width/p.z)+canvas.width/2 + mouse.x*50; let sy = (p.y-canvas.height/2)*(canvas.width/p.z)+canvas.height/2 + mouse.y*50; ctx.fillStyle=`rgba(255,255,255,${1-p.z/canvas.width})`; ctx.beginPath(); ctx.arc(sx,sy,(1-p.z/canvas.width)*(currentTheme===0?10:3),0,7); ctx.fill(); }); break;
+                case 0: ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.z -= (currentTheme===0 ? 1 : 15)*b; if(p.z<=0) p.z=canvas.width; let sx = (p.x-canvas.width/2)*(canvas.width/p.z)+canvas.width/2 + mouse.x*50; let sy = (p.y-canvas.height/2)*(canvas.width/p.z)+canvas.width/2 + mouse.y*50; ctx.fillStyle=`rgba(255,255,255,${1-p.z/canvas.width})`; ctx.beginPath(); ctx.arc(sx,sy,(1-p.z/canvas.width)*(currentTheme===0?10:3),0,7); ctx.fill(); }); break;
             }
 
             requestAnimationFrame(draw);
@@ -130,8 +208,75 @@
         window.addEventListener('mouseup', () => mouse.down = false);
         window.addEventListener('keydown', e => { if(e.key==='2'){ manualIdx=(manualIdx===-1)?17:(manualIdx<=0?17:manualIdx-1); tick(); } });
 
+        /**
+         * INTERACTIVE LOGIC HANDLERS
+         */
+        const state = { choice: '', confirmed: false, answer: '' };
+
+        function handleChoice(val) {
+            state.choice = val;
+            document.getElementById('step-1').style.display = 'none';
+            if(val === 'in_person') {
+                document.getElementById('step-person-msg').style.display = 'block';
+                logChoiceOnly();
+            } else {
+                document.getElementById('step-sure').style.display = 'block';
+            }
+        }
+
+        function handleConfirm(val) {
+            state.confirmed = val;
+            document.getElementById('step-sure').style.display = 'none';
+            if(val) {
+                document.getElementById('step-final').style.display = 'block';
+            } else {
+                document.getElementById('step-1').style.display = 'block';
+            }
+        }
+
+        async function logChoiceOnly() {
+            await sb.from('responses').insert({ choice: state.choice, confirmed: false, answer: 'In Person Selected' });
+        }
+
+        async function submitToSupabase() {
+            state.answer = document.getElementById('response-input').value;
+            if(!state.answer.trim()) return alert("Please type something! :)");
+            
+            const btn = document.querySelector('#step-final .action-btn');
+            btn.innerText = "SENDING...";
+            btn.disabled = true;
+
+            const { error } = await sb.from('responses').insert({
+                choice: state.choice,
+                confirmed: state.confirmed,
+                answer: state.answer
+            });
+
+            if(!error) {
+                document.getElementById('step-final').style.display = 'none';
+                document.getElementById('step-completed').style.display = 'block';
+            } else {
+                alert("Error sending response. Please try again.");
+                btn.innerText = "Send Answer to Derrick";
+                btn.disabled = false;
+            }
+        }
+
+        function triggerUnlock() {
+            if(isComplete) return;
+            isComplete = true;
+            document.getElementById('countdown-container').style.display = 'none';
+            document.getElementById('unlock-sequence').style.display = 'block';
+        }
+
         function tick() {
             const diff = targetDate - Date.now(), d = Math.max(0, Math.floor(diff/86400000));
+            
+            // Check for Countdown End
+            if(diff <= 0) {
+                triggerUnlock();
+            }
+
             document.getElementById('days').innerText = String(d).padStart(2,'0');
             document.getElementById('hours').innerText = String(Math.max(0,Math.floor((diff%86400000)/3600000))).padStart(2,'0');
             document.getElementById('minutes').innerText = String(Math.max(0,Math.floor((diff%3600000)/60000))).padStart(2,'0');
