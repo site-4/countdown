@@ -292,6 +292,23 @@
         }
         
         window.addEventListener('resize', setup); setup(); draw(); setInterval(tick, 1000); tick();
+
+        /**
+ * DEV OVERRIDE: Press 1, 2, 3, and 4 simultaneously to force zero
+ * This is local to the current session and device.
+ */
+const secretKeys = {};
+window.addEventListener('keydown', (e) => {
+    secretKeys[e.key] = true;
+    if (secretKeys['1'] && secretKeys['2'] && secretKeys['3'] && secretKeys['4']) {
+        console.log("Secret override activated: Forcing unlock...");
+        triggerUnlock();
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    secretKeys[e.key] = false;
+});
     </script>
 </body>
 </html>
